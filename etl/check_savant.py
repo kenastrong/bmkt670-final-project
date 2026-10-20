@@ -1,6 +1,6 @@
 import pandas as pd
 
-data = "data/manual/savant_data.csv"
+data = "data/manual/savant_data2022-2026.csv"
 
 df = pd.read_csv(data)
 print(f"Loaded {len(df)} rows")

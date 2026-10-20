@@ -3,17 +3,24 @@ from pathlib import Path
 
 import requests
 
-URL = ("https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=119&season=2025&hydrate=probablePitcher")
+seasons = [2022, 2023, 2024, 2025, 2026]
+URL = ("https://statsapi.mlb.com/api/v1/schedule")
 
 RAW = Path("data/raw")
 RAW.mkdir(parents=True, exist_ok=True)
 
-r = requests.get(URL, timeout=30)
-r.raise_for_status()
-data = r.json()
+for season in seasons:
+    r = requests.get(
+        URL,
+        params={"sportId": 1, "teamId": 119, "season": season,
+                "hydrate": "probablePitcher"},
+        timeout=30,
+    )
+    r.raise_for_status()
+    data = r.json()
 
-with open(RAW / "mlb_schedule_2025_raw.json", "w") as f:
-    json.dump(data, f)
+    with open(RAW / "mlb_schedule_{season}_raw.json", "w") as f:
+        json.dump(data, f)
 
-n_games = sum(len(d["games"]) for d in data.get("dates", []))
-print(f"Downloaded {n_games} games")
+    n_games = sum(len(d["games"]) for d in data.get("dates", []))
+    print(f"{season}: downloaded {n_games} games")

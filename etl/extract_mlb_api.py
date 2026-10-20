@@ -19,7 +19,7 @@ for season in seasons:
     r.raise_for_status()
     data = r.json()
 
-    with open(RAW / "mlb_schedule_{season}_raw.json", "w") as f:
+    with open(RAW / f"mlb_schedule_{season}_raw.json", "w") as f:
         json.dump(data, f)
 
     n_games = sum(len(d["games"]) for d in data.get("dates", []))

@@ -209,6 +209,9 @@ print("Dimension Table Count Check")
 print(f"  {len(dim_date)} dates, {len(dim_opponent)} opponents")
 print(" ")
 
+# reshaping wide tables was not needed as all three sources are already one row
+# per game (no week-by-week or month-by-month columns), so no melt is needed as shown in assignment instructions
+
 # derived features 
 # .shift(1) moves every value down one row, so each game only sees the games before it
 g = fact_game.merge(fact_stats[["game_id", "pit_whiff_pct"]], on="game_id", how="left")
@@ -244,3 +247,77 @@ home["days_since_last_home"] = home["date_id"].diff().dt.days # fans may be more
 before = len(home)
 home = home[home["attendance"].notna()]
 print(f"  dropped {before - len(home)} home games with no attendance recorded")
+print(" ")
+
+# build ML table
+ml = home.merge(dim_date.drop(columns="season"), on="date_id", how="left")
+ml = ml.merge(dim_opponent[["opponent_id", "is_nl_west", "abbreviation"]],
+              on="opponent_id", how="left")
+ml = ml.rename(columns={"abbreviation": "opponent_abbrev"})
+
+ml["split"] = ml["season"].map(split)
+ml["start_hour"] = ml["start_time_local"].dt.hour
+
+# encode categories as 0/1
+ml["is_night"] = (ml["day_night"] == "night").astype(int)
+ml["is_weekend"] = ml["is_weekend"].astype(int)
+ml["is_holiday"] = ml["is_holiday"].astype(int)
+ml["is_nl_west"] = ml["is_nl_west"].astype(int)
+for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]:
+    ml["dow_" + day[:3].lower()] = (ml["day_of_week"] == day).astype(int)
+
+# handle missing values (see docs/missing_data.md) medians use training rows only
+train = ml["split"] == "train"
+offseason_gap = ml.loc[ml["days_since_last_home"] > 60, "days_since_last_home"].median()
+fills = {
+    "win_pct_before": 0.5,
+    "win_pct_last10": 0.5,
+    "run_diff_last10": 0,
+    "division_rank_before": 1,
+    "streak_before": 0,
+    "opp_win_pct_before": 0.5,
+    "whiff_pct_last10": ml.loc[train, "whiff_pct_last10"].median(),
+    "att_last5_home": ml.loc[train, "attendance"].median(),
+    "days_since_last_home": offseason_gap,
+}
+
+for col, value in fills.items():
+    n_missing = ml[col].isna().sum()
+    if n_missing > 0:
+        print(f"  filled {n_missing} missing {col} with {value}")
+        ml[col] = ml[col].fillna(value)
+
+ml = ml[["game_id", "date_id", "season", "split", "attendance", "month",
+         "start_hour", "opponent_name", "opponent_abbrev", "opp_win_pct_before",
+         "is_weekend", "is_holiday", "is_night", "is_nl_west", "dow_mon", "dow_tue",
+         "dow_wed", "dow_thu", "dow_fri", "dow_sat", "dow_sun", "win_pct_before",
+         "win_pct_last10", "run_diff_last10", "division_rank_before",
+         "streak_before", "whiff_pct_last10", "att_last5_home",
+         "days_since_last_home"]]
+
+ml = ml.round({"opp_win_pct_before": 3, "win_pct_before": 3, "win_pct_last10": 3,
+               "run_diff_last10": 2, "whiff_pct_last10": 2, "att_last5_home": 1})
+print(" ")
+
+# save CSV files per table and find % missing values if any
+print("Save CSV files")
+fact_game = fact_game[["game_id", "date_id", "opponent_id", "season", "game_type",
+                       "is_home", "venue", "start_time_local", "day_night",
+                       "doubleheader_game", "probable_pitcher", "opp_win_pct_before",
+                       "dodgers_runs", "opp_runs", "win_loss", "division_rank",
+                       "streak", "attendance"]].round({"opp_win_pct_before": 3})
+
+tables = {
+    "dim_date": dim_date,
+    "dim_opponent": dim_opponent,
+    "fact_game": fact_game,
+    "fact_stats": fact_stats,
+    "ml_features_attendance": ml,
+}
+
+for name, df in tables.items():
+    df.to_csv(CLEAN / f"{name}.csv", index=False)
+    print(f"  saved {name}.csv ({len(df)} rows)")
+    missing = df.isna().sum()
+    if missing.sum() > 0:
+        print(missing[missing > 0].to_string())

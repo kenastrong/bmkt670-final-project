@@ -2,7 +2,8 @@ import pandas as pd
 
 data = "data/manual/savant_data2022-2026.csv"
 
-df = pd.read_csv(data)
+# utf-8-sig removes the hidden character before "pitches"
+df = pd.read_csv(data, encoding="utf-8-sig")
 print(f"Loaded {len(df)} rows")
 print("Columns:", list(df.columns))
 

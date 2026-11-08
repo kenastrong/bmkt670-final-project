@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from sklearn.metrics import mean_absolute_error
 
 # Read the ML table from Postgres and splits it
 load_dotenv()
@@ -54,3 +55,11 @@ plt.ylabel("Average attendance")
 plt.tight_layout()
 plt.savefig("docs/figures/attendance_by_day.png")
 plt.close()
+
+# Build a baseline 
+baseline_guess = train["attendance"].mean()
+baseline_mae = mean_absolute_error(
+    validate["attendance"], [baseline_guess] * len(validate)
+)
+print(f"Baseline Guess: {baseline_guess:,.0f} fans")
+print(f"Baseline MAE: {baseline_mae:,.0f} fans")

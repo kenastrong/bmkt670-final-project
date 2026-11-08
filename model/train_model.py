@@ -94,3 +94,10 @@ for name, model in models.items():
     model.fit(x_train, train["attendance"])
     scores[name] = mean_absolute_error(validate["attendance"], model.predict(x_validate))
     print(f"  {name}: {scores[name]:,.0f}")
+print()
+
+# Choose best model and test it once: linear regression
+print("Linear Regression Test")
+best_model = models["linear_regression"]
+test_mae = mean_absolute_error(test["attendance"], best_model.predict(test[features]))
+print(f"  test MAE: {test_mae:,.0f}")

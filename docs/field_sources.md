@@ -64,6 +64,12 @@
 | ml_features_attendance | whiff_pct_last10 | Calculated in Python | Average pit_whiff_pct over the previous 10 games | Derived feature |
 | ml_features_attendance | att_last5_home | Calculated in Python | Average attendance of the previous 5 home games | Derived feature |
 | ml_features_attendance | days_since_last_home | Calculated in Python | Days since the previous home game | Derived feature |
+| predictions | game_id | Joined | ml_features_attendance.game_id | Key: links each prediction to its game in fact_game |
+| predictions | split | Joined | ml_features_attendance.split | Shows which split each predictions was |
+| predictions | actual | Joined | ml_features_attendance.attendance | The real attendance the prediction is compared to |
+| predictions | predicted | Calculated in Python | Linear regression prediction (model/train_model.py) | Linear Regression's predicted attendance |
+| predictions | error | Calculated in Python | actual − predicted | Shows the models error (how many fans it missed by in its prediction) |
+| predictions | model_name | Calculated in Python | Name of the chosen model: "linear_regression" | Labels which model made the predictions in the table |
 
 ## Source fields used but not stored
 - **Baseball-Refernce `Date`** (e.g., "Thursday Mar 27"): has no year. Season is added, and the date is used with `Opp` to match each Bball-Ref row to its MLB game.

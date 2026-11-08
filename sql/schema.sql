@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS predictions CASCADE;
 DROP TABLE IF EXISTS ml_features_attendance CASCADE;
 DROP TABLE IF EXISTS fact_stats CASCADE;
 DROP TABLE IF EXISTS fact_game CASCADE;
@@ -90,4 +91,14 @@ CREATE TABLE ml_features_attendance (
     whiff_pct_last10        NUMERIC(5,2),     -- derived feature, avg pitching whiff %, previous 10 games
     att_last5_home          NUMERIC(8,1),     -- derived feature, avg attendance, previous 5 home games
     days_since_last_home    INTEGER           -- derived feature, days since the previous home game
+);
+
+-- One row = Linear Regression's prediction for one home game
+CREATE TABLE predictions (
+    game_id     INTEGER PRIMARY KEY REFERENCES fact_game(game_id),
+    split       TEXT    NOT NULL CHECK (split IN ('train', 'validate', 'test')),
+    actual      INTEGER NOT NULL,                -- real value of attendance
+    predicted   NUMERIC(8,1) NOT NULL,           -- linear regression's prediction
+    error       NUMERIC(8,1) NOT NULL,           -- actual minus predicted
+    model_name  TEXT    NOT NULL                 -- linear_regression
 );

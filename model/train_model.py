@@ -107,3 +107,20 @@ print()
 print("Linear Regression's top 5 features") 
 coefficients = pd.Series(best_model.coef_, index=features)
 print(coefficients.sort_values(key=abs, ascending=False).head(5))
+
+# Save predictions to Postgres
+predictions = pd.DataFrame({
+    "game_id": df["game_id"],
+    "split": df["split"],
+    "actual": df["attendance"],
+    "predicted": best_model.predict(df[features]),
+})
+
+predictions["error"] = predictions["actual"] - predictions["predicted"]
+predictions["model_name"] = "linear_regression"
+
+cur.execute("DELETE FROM predictions;")
+cur.executemany("INSERT INTO predictions VALUES (%s, %s, %s, %s, %s, %s)",
+                predictions.astype(object).values.tolist())
+conn.commit()
+conn.close()

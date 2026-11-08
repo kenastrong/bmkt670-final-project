@@ -10,6 +10,8 @@ steps = [
                                 # build features, build dimention tables, build ML table, handle missing values, and save CSVs
     "etl/load.py",              # rebuild tables, then load into Postgres
     "etl/quality_checks.py",    # print PASS/FAIL for each quality check
+    "model/train_model.py",     # split data, save charts, calculate baseline, compare 3 models, test linear regression,
+                                # find top features, save predictions to Postgres
 ]
 
 for step in steps:

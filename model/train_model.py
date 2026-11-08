@@ -6,6 +6,8 @@ import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
 from sklearn.metrics import mean_absolute_error
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 
 # Read the ML table from Postgres and splits it
 load_dotenv()
@@ -27,6 +29,7 @@ test = df[df["split"] == "test"]
 print("Train:", len(train))
 print("Validate:", len(validate))
 print("Test:", len(test))
+print()
 
 # Make 3 charts to explore training data 
 # Chart 1: distribution of attendance
@@ -63,3 +66,31 @@ baseline_mae = mean_absolute_error(
 )
 print(f"Baseline Guess: {baseline_guess:,.0f} fans")
 print(f"Baseline MAE: {baseline_mae:,.0f} fans")
+print()
+
+# Train 3 models on training games, score each on validate games
+# Only use feature columns
+features = [
+    "month", "start_hour", "opp_win_pct_before", "is_holiday", "is_night", "is_nl_west",
+    "dow_tue", "dow_wed", "dow_thu", "dow_fri", "dow_sat", "dow_sun",
+    "win_pct_before", "win_pct_last10", "run_diff_last10", "division_rank_before",
+    "streak_before", "whiff_pct_last10", "att_last5_home", "days_since_last_home",
+]
+
+x_train = train[features]
+x_validate = validate[features]
+
+models = {
+    "linear_regression": LinearRegression(),
+    "random_forest": RandomForestRegressor(random_state=42),
+    "gradient_boosting": GradientBoostingRegressor(random_state=42),
+}
+
+# Model comparison
+print("Model Comparison")
+scores = {}
+print("baseline: 3,724")
+for name, model in models.items():
+    model.fit(x_train, train["attendance"])
+    scores[name] = mean_absolute_error(validate["attendance"], model.predict(x_validate))
+    print(f"  {name}: {scores[name]:,.0f}")

@@ -101,3 +101,9 @@ print("Linear Regression Test")
 best_model = models["linear_regression"]
 test_mae = mean_absolute_error(test["attendance"], best_model.predict(test[features]))
 print(f"  test MAE: {test_mae:,.0f}")
+print()
+
+# Find linear regression's top 5 features
+print("Linear Regression's top 5 features") 
+coefficients = pd.Series(best_model.coef_, index=features)
+print(coefficients.sort_values(key=abs, ascending=False).head(5))

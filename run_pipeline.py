@@ -12,6 +12,7 @@ steps = [
     "etl/quality_checks.py",    # print PASS/FAIL for each quality check
     "model/train_model.py",     # split data, save charts, calculate baseline, compare 3 models, test linear regression,
                                 # find top features, save predictions to Postgres
+    "ai/generate_summaries.py"  # AI writes summaries for each test game and saves them to ai_summaries table
 ]
 
 for step in steps:

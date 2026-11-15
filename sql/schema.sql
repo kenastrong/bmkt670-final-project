@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS ai_summaries CASCADE;
 DROP TABLE IF EXISTS predictions CASCADE;
 DROP TABLE IF EXISTS ml_features_attendance CASCADE;
 DROP TABLE IF EXISTS fact_stats CASCADE;
@@ -101,4 +102,11 @@ CREATE TABLE predictions (
     predicted   NUMERIC(8,1) NOT NULL,           -- linear regression's prediction
     error       NUMERIC(8,1) NOT NULL,           -- actual minus predicted
     model_name  TEXT    NOT NULL                 -- linear_regression
+);
+
+-- One row = AI written summary for one test game
+CREATE TABLE ai_summaries (
+    game_id     INTEGER PRIMARY KEY REFERENCES fact_game(game_id),
+    summary     TEXT    NOT NULL,               -- 2-3 sentence summary from Claude
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW()-- when the summary was saved
 );

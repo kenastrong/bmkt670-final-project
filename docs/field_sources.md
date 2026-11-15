@@ -70,6 +70,9 @@
 | predictions | predicted | Calculated in Python | Linear regression prediction (model/train_model.py) | Linear Regression's predicted attendance |
 | predictions | error | Calculated in Python | actual − predicted | Shows the models error (how many fans it missed by in its prediction) |
 | predictions | model_name | Calculated in Python | Name of the chosen model: "linear_regression" | Labels which model made the predictions in the table |
+| ai_summaries | game_id | MLB Stats API | `gamePk` from the predictions table | Links each summary to its game |
+| ai_summaries | summary | Anthropic API (Claude Haiku 5.5) | Generated in ai/generate_summaries.py from each test game's facts in predictions, fact_game, dim_date, and ml_features_attendance | 2–3 sentence summary of the game written for the operations manager |
+| ai_summaries | created_at | Postgres | `DEFAULT NOW()` when the row is inserted | When the summary was generated |
 
 ## Source fields used but not stored
 - **Baseball-Refernce `Date`** (e.g., "Thursday Mar 27"): has no year. Season is added, and the date is used with `Opp` to match each Bball-Ref row to its MLB game.

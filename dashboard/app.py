@@ -1,5 +1,6 @@
 import os
 
+import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 import psycopg2
@@ -151,3 +152,52 @@ elif page == "2. How good are the predictions":
         "but 50,705 fans actually came (3.6× the typical miss). The model didn't know about anything that made this series "
         "special for attendance purposes, like a promotion or giveaway night, or maybe a popular starting pitcher for either team."
     )
+
+# Page 3
+elif page == "3. What should we do":
+    st.title("What should we do")
+    st.write("How should we plan staffing, parking and promotions for upcoming home game?")
+
+    # 3 recommendations and 1 limit
+    st.subheader("Recommendations")
+    st.success("**1. Don't cut staff for Monday or Wednesday games just based on the model alone.** 6 of the 10 biggest misses were Monday or Wednesday games that drew far more fans than predicted (Page 2).")
+    st.success("**2. Plan parking and traffic for the largest crowds Thursday through Saturday.** These 3 days average about 50,000 fans (Page 1).")
+    st.success("**3. Run promotions on Wednesdays.** They average the fewest fans, about 46,300 (Page 1), so they have the most empty seats to fill and promotions like bobblehead giveaways will encourage people to come.")
+    st.warning("**Limit:** This model doesn't see promotions, giveaways, or special events. For games with these elements, use the prediction as a minimum guess, not an accurate forecast. Its biggest miss, a June 17 Wednesday game against Tampa Bay, drew almost 9,000 more fans than predicted and could have been missed due to a promotion or special event (Page 2).")
+
+    # Prediction tool
+    st.subheader("Plan the next game")
+    st.caption("Enter what you'll know before game day, the model predicts that games attendance")
+    model = joblib.load("model/attendance_model.joblib")
+    row = run_query("""
+        SELECT m.* FROM ml_features_attendance m
+        JOIN fact_game f ON m.game_id = f.game_id
+        ORDER BY f.date_id DESC LIMIT 1;
+    """)[model.feature_names_in_].astype(float)
+
+    c1, c2, c3 = st.columns(3)
+    day = c1.selectbox("Day of week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+    night = c2.selectbox("Start", ["Night", "Day"]) == "Night"
+    row["att_last5_home"] = c3.number_input("Avg attendance, last 5 home games", 30000, 56000, 49000, step=500)
+
+    c4, c5, c6 = st.columns(3)
+    row["month"] = c4.selectbox("Month", [4, 5, 6, 7, 8, 9], format_func=lambda m: ["April", "May", "June", "July", "August", "September"][m - 4])
+    row["win_pct_before"] = c5.number_input("Dodgers win %", 0.0, 1.0, 0.600, step=0.010, format="%.3f")
+    row["opp_win_pct_before"] = c6.number_input("Opponent win %", 0.0, 1.0, 0.500, step=0.010, format="%.3f")
+
+    prediction = model.predict(row)[0]
+    st.metric("Predicted attendance", f"{prediction:,.0f} fans")
+    st.write(f"Typical miss is about 2,500 fans, so plan for **{prediction - 2500:,.0f} to {min(prediction + 2500, 56000):,.0f}**.")
+
+    # AI summaries
+    st.subheader("AI summaries for 2026 games")
+    st.caption("Written by Claude Haiku 5.5 from each game's facts.")
+    summaries = run_query("""
+        SELECT f.date_id || ' vs ' || m.opponent_abbrev AS game, s.summary
+        FROM ai_summaries s
+        JOIN fact_game f ON s.game_id = f.game_id
+        JOIN ml_features_attendance m ON s.game_id = m.game_id
+        ORDER BY f.date_id;
+    """)
+    pick = st.selectbox("Game", summaries["game"])
+    st.info(summaries[summaries["game"] == pick]["summary"].iloc[0])

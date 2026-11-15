@@ -1,6 +1,7 @@
 import os
 from pathlib import Path 
 
+import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 import psycopg2
@@ -124,3 +125,6 @@ cur.executemany("INSERT INTO predictions VALUES (%s, %s, %s, %s, %s, %s)",
                 predictions.astype(object).values.tolist())
 conn.commit()
 conn.close()
+
+# save model for dashboard
+joblib.dump(best_model, "model/attendance_model.joblib")

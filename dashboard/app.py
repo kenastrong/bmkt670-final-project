@@ -80,4 +80,74 @@ if page == "1. What happened":
         ax.yaxis.set_major_formatter("{x:,.0f}")
         ax.set_ylabel("Average attendance")
         st.pyplot(fig)
-        st.caption("Average attendance for each day of the week in the selected seasons. Thursday, Friday and Saturday games bring in the hightest average attendance while Wednesdays bring in the lowest in the last 3 seasons since 2024")
+        st.caption("Average attendance for each day of the week in the selected seasons. Thursday, Friday and Saturday games bring in the hightest average attendance "
+        "while Wednesdays bring in the lowest in the last 3 seasons since 2024")
+
+# Page 2
+elif page == "2. How good are the predictions":
+    st.title("How good are the predictions")
+    st.write("Can we trust the model? Validate (2025) and Test (2026) games only")
+
+    df = run_query("""
+        SELECT p.game_id, p.split, p.actual, p.predicted, p.error,
+               f.date_id, d.day_of_week, m.opponent_abbrev
+        FROM predictions p
+        JOIN fact_game f ON p.game_id = f.game_id
+        JOIN dim_date d ON f.date_id = d.date_id
+        JOIN ml_features_attendance m ON p.game_id = m.game_id;
+    """)
+    df[["predicted", "error"]] = df[["predicted", "error"]].astype(float)
+    df["miss"] = df["error"].abs()
+
+    # Baseline MAE
+    train_mean = df[df["split"] == "train"]["actual"].mean()
+    validate = df[df["split"] == "validate"]
+    baseline_mae = (validate["actual"] - train_mean).abs().mean()
+
+    # Model MAE
+    preds = df[df["split"] != "train"].copy()
+    mae = preds.groupby("split")["miss"].mean()
+
+    # MAE tiles
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Baseline MAE (2025)", f"{baseline_mae:,.0f} fans")
+    col2.metric("Model MAE (2025, validate)", f"{mae['validate']:,.0f} fans")
+    col3.metric("Model MAE (2026, test)", f"{mae['test']:,.0f} fans")
+
+    # Predicted vs. actual attendance
+    st.subheader("Predicted vs. Actual Attendance")
+    fig, ax = plt.subplots()
+    for split in ["validate", "test"]:
+        rows = preds[preds["split"] == split]
+        ax.scatter(rows["predicted"], rows["actual"], label=split, alpha=0.7)
+    low = preds[["actual", "predicted"]].min().min()
+    high = preds[["actual", "predicted"]].max().max()
+    ax.plot([low, high], [low, high], "--", color="gray")
+    ax.xaxis.set_major_formatter("{x:,.0f}")
+    ax.yaxis.set_major_formatter("{x:,.0f}")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.legend()
+    st.pyplot(fig)
+    st.caption("Each dot is one game in either the 2025 (validate) or 2026 (test) season. Dots on the dashed line are perfect predictions by the model. "
+    "The model tended to underpredict some of the most attendend games (above 50,000) while also missing a few really low 2025 crowds (below 44,000)")
+
+    # Biggest misses table
+    st.subheader("Biggest Misses")
+    st.caption("A miss is unusual if it's more than 2× the model's typical miss.")
+    preds["x_typical"] = (preds["miss"] / preds["split"].map(mae)).round(1)
+    preds["flag"] = preds["x_typical"].apply(lambda x: "Unusual" if x > 2 else "")
+    top = preds.sort_values("miss", ascending=False).head(10).copy()
+    top[["actual", "predicted", "error"]] = top[["actual", "predicted", "error"]].round(0).astype(int)
+    st.dataframe(
+        top[["date_id", "day_of_week", "opponent_abbrev", "split", "actual", "predicted", "error", "x_typical", "flag"]],
+        hide_index=True,
+    )
+
+    # Most unusual miss
+    st.write(
+        "**Most unusual miss: Wednesday, June 17, 2026 vs. Tampa Bay Rays.** "
+        "The model predicted 41,757 fans as it was a midweek game against a non-rival team, "
+        "but 50,705 fans actually came (3.6× the typical miss). The model didn't know about anything that made this series "
+        "special for attendance purposes, like a promotion or giveaway night, or maybe a popular starting pitcher for either team."
+    )

@@ -201,3 +201,34 @@ elif page == "3. What should we do":
     """)
     pick = st.selectbox("Game", summaries["game"])
     st.info(summaries[summaries["game"] == pick]["summary"].iloc[0])
+
+# Page 4
+elif page == "4. Explore":
+    st.title("Explore")
+    st.write("Pick a measure and a season to see how it changes game by game.")
+
+    df = run_query("""
+        SELECT f.date_id, f.season, m.attendance, m.att_last5_home, m.win_pct_before,
+               m.win_pct_last10, m.run_diff_last10, m.streak_before
+        FROM ml_features_attendance m
+        JOIN fact_game f ON m.game_id = f.game_id
+        ORDER BY f.date_id;
+    """)
+
+    measures = {
+        "Attendance": "attendance",
+        "Avg attendance, last 5 home games": "att_last5_home",
+        "Dodgers win % before the game": "win_pct_before",
+        "Win % in last 10 games": "win_pct_last10",
+        "Run differential, last 10 games": "run_diff_last10",
+        "Win/loss streak": "streak_before",
+    }
+
+    c1, c2 = st.columns(2)
+    label = c1.selectbox("Measure", list(measures))
+    season = c2.select_slider("Season", sorted(df["season"].unique()), value=df["season"].max())
+
+    data = df[df["season"] == season].set_index("date_id")[measures[label]].astype(float)
+    st.subheader(f"{label}, {season}")
+    st.line_chart(data)
+    st.caption("Each point is one home game. Hover over it to see the game date and specific value for the selected measure.")

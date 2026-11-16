@@ -184,6 +184,10 @@ elif page == "3. What should we do":
     row["month"] = c4.selectbox("Month", [4, 5, 6, 7, 8, 9], format_func=lambda m: ["April", "May", "June", "July", "August", "September"][m - 4])
     row["win_pct_before"] = c5.number_input("Dodgers win %", 0.0, 1.0, 0.600, step=0.010, format="%.3f")
     row["opp_win_pct_before"] = c6.number_input("Opponent win %", 0.0, 1.0, 0.500, step=0.010, format="%.3f")
+    row["is_night"] = int(night)
+    row["start_hour"] = 19 if night else 13
+    for d in ["tue", "wed", "thu", "fri", "sat", "sun"]:
+        row[f"dow_{d}"] = int(day[:3].lower() == d)
 
     prediction = model.predict(row)[0]
     st.metric("Predicted attendance", f"{prediction:,.0f} fans")
